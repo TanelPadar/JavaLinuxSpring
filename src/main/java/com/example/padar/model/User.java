@@ -2,6 +2,7 @@ package com.example.padar.model;
 
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.data.annotation.CreatedBy;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -18,6 +19,7 @@ public class User {
     private String email;
 
 
+
     @Override
     public String toString() {
         return "{\"name\":\"" + name + "\"," +
@@ -30,6 +32,7 @@ public class User {
         this.name = name;
         this.username = username;
         this.email = email;
+
     }
 
     public User() {

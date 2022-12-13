@@ -26,8 +26,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.Payload;
 import org.springframework.messaging.handler.annotation.SendTo;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.task.DelegatingSecurityContextAsyncTaskExecutor;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
+
 import javax.annotation.PostConstruct;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
@@ -126,7 +130,7 @@ public class UserController {
                                 );
                             }
                         }
-                        log.fillNullFields();
+                        if (log.getOldBody() != null) log.distinctBody();
                         logs.add(log);
                     }
                 }
@@ -155,8 +159,11 @@ public class UserController {
             }
     )
     public ResponseEntity<?> addUsers(@RequestBody User user, HttpSession session){
+        Authentication getAuth = SecurityContextHolder.getContext().getAuthentication();
+        String auth = getAuth.getName();
+        System.out.println(auth);
         if (bucket.tryConsume(1)) {
-            UserDao.addUser(user);
+            UserDao.addUser(user,auth);
             template.convertAndSend("/topic/post", user);
             template.convertAndSend("/topic/get", new Kasutajad(UserDao.getAllUsers()));
             return ResponseEntity.ok(UserDao.getAllUsers().get(UserDao.getAllUsers().size() - 1));
@@ -184,19 +191,23 @@ public class UserController {
 
 
     public ResponseEntity<?> editUsers(@PathVariable int id,@RequestBody User user, @Autowired HttpServletRequest request){
-        if (bucket.tryConsume(1)) {
-            LOG.info(
-                    "FINISHED PROCESSING : METHOD={}; REQUESTURL={}; ID={}; REQUESTBODY={}; OLDUSER={};",
-                    request.getMethod(), request.getRequestURI(), request.getSession().getId(),
-                    user.toString(), UserDao.getUserById(id).get(0).toString());
-            UserDao.updateUser(user,id);
+        Authentication getAuth = SecurityContextHolder.getContext().getAuthentication();
+        String auth = getAuth.getName();
+        LOG.info(
+                "FINISHED PROCESSING : METHOD={}; REQUESTURL={}; ID={}; REQUESTBODY={}; OLDUSER={};",
+                request.getMethod(), request.getRequestURI(), request.getSession().getId(),
+                user.toString(), UserDao.getUserById(id).get(0).toString());
+        if( UserDao.updateUser(user,id,auth) > 0) {
+            UserDao.updateUser(user, id, auth);
             template.convertAndSend("/topic/update", UserDao.getUserById(id));
-            return ResponseEntity.ok( UserDao.getUserById(id).get(0));
-        } else {
-            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).build();
+            return ResponseEntity.ok(UserDao.getUserById(id).get(0));
+        }else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
         }
 
+
     }
+
     @DeleteMapping("/users/{id}")
     @Operation(
             tags = {"Delete existing user"},
@@ -208,10 +219,15 @@ public class UserController {
                     description = "Success Response.")
             }
     )
-    public ResponseEntity<String> deleteUsersById(@PathVariable int id){
-        UserDao.deleteUserById(id);
-        template.convertAndSend("/topic/delete", id);
-        return ResponseEntity.ok("{}");
+    public ResponseEntity<?> deleteUsersById(@PathVariable int id) {
+        Authentication getAuth = SecurityContextHolder.getContext().getAuthentication();
+        String auth = getAuth.getName();
+        if(UserDao.deleteUserById(id, auth) > 0) {
+            template.convertAndSend("/topic/delete", id);
+            return ResponseEntity.ok("{}");
+        } else {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN);
+        }
     }
 
     @PostConstruct

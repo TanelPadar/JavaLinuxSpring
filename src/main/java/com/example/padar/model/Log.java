@@ -67,11 +67,22 @@ public class Log {
         this.date = date;
     }
 
-    public void fillNullFields() {
-        if (this.body == null) this.setBody("", "", "");
-        if (this.oldBody == null) this.setOldBody("", "", "");
+    public void distinctBody() {
+        if (this.oldBody.getName().equals(this.body.getName())) {
+            this.oldBody.setName(null);
+            this.body.setName(null);
+        }
+        if (this.oldBody.getUsername().equals(this.body.getUsername())) {
+            this.oldBody.setUsername(null);
+            this.body.setUsername(null);
+        }
+        if (this.oldBody.getEmail().equals(this.body.getEmail())) {
+            this.oldBody.setEmail(null);
+            this.body.setEmail(null);
+        }
     }
 }
+
 
 class RequestBody {
     private String name;

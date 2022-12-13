@@ -23,7 +23,7 @@ public class SpringSecuirtyConfiguration {
     public InMemoryUserDetailsManager userDetailsService() {
         UserDetails user = User.withUsername("user")
                 .password("password")
-                .roles("USER")
+                .roles("ADMIN")
                 .build();
         UserDetails user1 = User.withUsername("user1")
                 .password("password")
@@ -41,9 +41,9 @@ public class SpringSecuirtyConfiguration {
                 http.authorizeRequests().antMatchers(HttpMethod.GET).permitAll().and().
                 authorizeRequests().antMatchers(HttpMethod.OPTIONS).permitAll().and().
                 authorizeRequests().antMatchers(HttpMethod.GET,"/actuator/**").hasAnyRole("ADMIN").and().
-                authorizeRequests().antMatchers(HttpMethod.POST).hasAnyRole("ADMIN").and().
-                authorizeRequests().antMatchers(HttpMethod.PUT).hasAnyRole("ADMIN").and().
-                authorizeRequests().antMatchers(HttpMethod.DELETE).hasAnyRole("ADMIN").
+                authorizeRequests().antMatchers(HttpMethod.POST).permitAll().and().
+                authorizeRequests().antMatchers(HttpMethod.PUT).permitAll().and().
+                authorizeRequests().antMatchers(HttpMethod.DELETE).permitAll().
                 anyRequest().authenticated().and().httpBasic();
                 return http.build();
     }
